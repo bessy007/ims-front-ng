@@ -74,14 +74,6 @@ src/
 - `develop` → integration branch
 - `feature/*` → new features
 
-Example:
-
-```
-feature/sales
-```
-
----
-
 ## 📌 Notes
 
 - Make sure you have Angular CLI installed:
@@ -97,3 +89,6 @@ npm install -g @angular/cli
 ## 👤 Author
 
 Maintained by the IMS team.
+
+## IMPORTANT NOTE for other users
+-- To make sure that the frontend runs, the backend should also be launched in order to start the frontend.
