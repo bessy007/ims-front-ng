@@ -1,0 +1,80 @@
+<div>
+  <div class="ims-page-heading">
+    <h1 class="ims-page-title">{{ title() }}</h1>
+
+    <div style="display: flex; gap: 8px; flex-wrap: wrap">
+      @if (status() === 'DRAFT') {
+        <button type="button" (click)="goTo('/supplies/new')">New Supply</button>
+        <button type="button" (click)="goTo('/supplies/confirmed')">Confirmed Supplies</button>
+      } @else {
+        <button type="button" (click)="goTo('/supplies')">Draft Supplies</button>
+        <button type="button" (click)="goTo('/supplies/new')">New Supply</button>
+      }
+    </div>
+  </div>
+
+  <div class="ims-panel">
+    <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap">
+      <input
+        placeholder="Search document number..."
+        [formControl]="searchControl"
+        style="min-width: 280px; max-width: 400px"
+      />
+
+      <button type="button" (click)="loadRows()">Refresh</button>
+    </div>
+
+    @if (loading()) {
+      <p>Loading supplies...</p>
+    } @else if (error()) {
+      <p>Failed to load supplies.</p>
+    } @else {
+      <div class="ims-data-table-wrap">
+        <table class="ims-data-table">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Supplier</th>
+              <th>Date</th>
+              <th>Invoice Number</th>
+              <th>Invoice Date</th>
+              <th class="ims-num">Purchase MKD</th>
+              <th class="ims-num">Retail MKD</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (rows().length === 0) {
+              <tr>
+                <td colspan="9">No supply documents found.</td>
+              </tr>
+            } @else {
+              @for (row of rows(); track row.id) {
+                <tr>
+                  <td>{{ row.documentNumber }}</td>
+                  <td>{{ row.supplierName || '-' }}</td>
+                  <td>{{ row.documentDate ? (row.documentDate | date: 'shortDate') : '-' }}</td>
+                  <td>{{ row.invoiceNumber || '-' }}</td>
+                  <td>{{ row.invoiceDate ? (row.invoiceDate | date: 'shortDate') : '-' }}</td>
+                  <td class="ims-num">{{ row.totalPurchaseValueMkd == null ? '-' : (row.totalPurchaseValueMkd | number: '1.2-2') }}</td>
+                  <td class="ims-num">{{ row.totalRetailValueMkd == null ? '-' : (row.totalRetailValueMkd | number: '1.2-2') }}</td>
+                  <td>{{ row.status }}</td>
+                  <td>
+                    <button type="button" (click)="goTo('/supplies/' + row.id)">Open</button>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center">
+        <button type="button" [disabled]="page() <= 0" (click)="previousPage()">Previous</button>
+        <span>Page {{ page() + 1 }} of {{ Math.max(totalPages(), 1) }}</span>
+        <button type="button" [disabled]="page() + 1 >= totalPages()" (click)="nextPage()">Next</button>
+      </div>
+    }
+  </div>
+</div>

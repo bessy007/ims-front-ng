@@ -1,0 +1,31 @@
+<div>
+  <h1 class="ims-page-title">Categories</h1>
+
+  <form class="ims-card" [formGroup]="form" (ngSubmit)="submit()">
+    <h3 class="ims-card__title">Add Category</h3>
+
+    <input type="text" placeholder="Category name" formControlName="name" required style="margin-bottom: 12px" />
+
+    <button type="submit" class="ims-btn-primary" style="width: auto" [disabled]="saving()">
+      {{ saving() ? 'Saving...' : 'Save Category' }}
+    </button>
+  </form>
+
+  <div class="ims-card">
+    <h3 class="ims-card__title">Category List</h3>
+
+    @if (loading()) {
+      <p style="color: var(--ims-text-muted)">Loading categories...</p>
+    } @else if (categories().length === 0) {
+      <p style="color: var(--ims-text-muted)">No categories found.</p>
+    } @else {
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        @for (category of categories(); track category.id) {
+          <div class="ims-list-row">
+            <strong>{{ category.name }}</strong>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,50 @@
+<div class="ims-login">
+  <div class="ims-login__card">
+    <div class="ims-login__form-panel">
+      <form class="ims-login__form-inner" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="ims-login__field ims-login__field--underline">
+          <label for="ims-login-user">Username &amp; email address</label>
+          <input id="ims-login-user" type="text" autocomplete="username" formControlName="username" />
+        </div>
+
+        <div class="ims-login__field ims-login__field--underline">
+          <label for="ims-login-password">Password</label>
+          <input
+            id="ims-login-password"
+            type="password"
+            autocomplete="current-password"
+            formControlName="password"
+          />
+        </div>
+
+        <div class="ims-login__action-row">
+          <label class="ims-login__remember">
+            <input type="checkbox" formControlName="remember" />
+            <span>Remember login</span>
+          </label>
+          <button type="submit" class="ims-login__btn-pill" [disabled]="isSubmitting()">
+            {{ isSubmitting() ? 'Logging in...' : 'Login' }}
+          </button>
+        </div>
+
+        <div class="ims-login__links">
+          <a href="#forgot" (click)="$event.preventDefault()">Forgot your username or password?</a>
+          <span class="ims-login__links-note">
+            Contact Administrator to request password change
+          </span>
+        </div>
+
+        <div class="ims-login__legal-sep" role="presentation"></div>
+        <p class="ims-login__legal">
+          By signing up, you agree to Univerzal Auto's Terms and Conditions &amp; Privacy Policy
+        </p>
+      </form>
+    </div>
+
+    <div class="ims-login__visual-panel">
+      <div class="ims-login__visual-logo">
+        <img src="/univerzal-logo.png" alt="Univerzal Auto" />
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,514 @@
+<div class="stats-page">
+  <div class="stats-hero">
+    <h1 class="stats-hero__title">Statistics</h1>
+    <p class="stats-hero__sub">
+      Interactive reports: sold quantities by period, per-customer cash trails, customers active in both channels, and deep-dive product movement.
+    </p>
+  </div>
+
+  <nav class="stats-tab-rail" aria-label="Report type">
+    <button type="button" class="stats-tab" [class.stats-tab--active]="tab() === 'products-sold'" (click)="setTab('products-sold')">
+      <span class="stats-tab__label-full">Products sold</span>
+      <span class="stats-tab__label-short">Sold</span>
+    </button>
+    <button type="button" class="stats-tab" [class.stats-tab--active]="tab() === 'customer-report'" (click)="setTab('customer-report')">
+      <span class="stats-tab__label-full">Raporti periodik - kesh</span>
+      <span class="stats-tab__label-short">Cash report</span>
+    </button>
+    <button type="button" class="stats-tab" [class.stats-tab--active]="tab() === 'wholesale-retail'" (click)="setTab('wholesale-retail')">
+      <span class="stats-tab__label-full">Wholesale & retail</span>
+      <span class="stats-tab__label-short">W+R</span>
+    </button>
+    <button type="button" class="stats-tab" [class.stats-tab--active]="tab() === 'product'" (click)="setTab('product')">
+      <span class="stats-tab__label-full">Product trend</span>
+      <span class="stats-tab__label-short">Product</span>
+    </button>
+  </nav>
+
+  @if (tab() === 'products-sold') {
+    <section class="stats-panel" id="stats-print-products-sold">
+      <div class="stats-panel__head">
+        <div>
+          <h3 class="stats-panel__title">Products sold in period</h3>
+          <p class="stats-panel__desc">
+            Confirmed sales only. Defaults to the last 24 hours - use quick ranges or set custom from/to, then Apply.
+          </p>
+        </div>
+        <button type="button" class="stats-btn-ghost" (click)="printProductsSold()">Print / PDF</button>
+      </div>
+
+      <div class="stats-range-chips">
+        <span style="font-size: 0.78rem; color: var(--ims-text-muted)">Quick:</span>
+        @for (item of [{label:'24h',h:24},{label:'7d',h:168},{label:'30d',h:720}]; track item.label) {
+          <button type="button" class="stats-chip" (click)="setProductsQuickRange(item.h)">{{ item.label }}</button>
+        }
+      </div>
+
+      <div class="stats-filters">
+        <div class="stats-field">
+          <span>From</span>
+          <input type="datetime-local" class="ims-input" [value]="datetimeLocalValue(draftProducts().dateFrom)" (change)="updateDraftProducts('dateFrom', $any($event.target).value)" />
+        </div>
+        <div class="stats-field">
+          <span>To</span>
+          <input type="datetime-local" class="ims-input" [value]="datetimeLocalValue(draftProducts().dateTo)" (change)="updateDraftProducts('dateTo', $any($event.target).value)" />
+        </div>
+        <button type="button" class="stats-btn-accent" (click)="applyProductsRange()">Apply range</button>
+      </div>
+
+      @if (productsSoldLoading()) {
+        <div class="stats-skeleton" style="height: 180px"></div>
+      } @else if (productsSoldError()) {
+        <p style="color: var(--ims-danger)">Failed to load data.</p>
+      } @else if (productsSoldData()) {
+        <div class="ims-data-table-wrap">
+          <table class="ims-data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Article</th>
+                <th style="text-align: right">Qty</th>
+                <th style="text-align: right">Amount (MKD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (productsSoldData()!.length === 0) {
+                <tr><td colspan="4">No sales in this period.</td></tr>
+              } @else {
+                @for (row of productsSoldData()!; track row.productId) {
+                  <tr>
+                    <td>{{ row.productName || '-' }}</td>
+                    <td>{{ row.articleNumber || '-' }}</td>
+                    <td style="text-align: right">{{ formatDecimal(row.totalQuantity) }}</td>
+                    <td style="text-align: right">{{ formatMoney(row.totalAmountMkd) }}</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  @if (tab() === 'customer-report') {
+    <section class="stats-panel">
+      <div class="stats-panel__head">
+        <div>
+          <h3 class="stats-panel__title">Raporti periodik - kesh</h3>
+          <p class="stats-panel__desc">
+            First you see <strong>all confirmed sales</strong> in the date range (shop total). Optionally choose a customer to narrow the table to that account only.
+          </p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px">
+        <div class="stats-search-wrap" style="flex: 1; min-width: 220px">
+          <div class="stats-field stats-field--grow">
+            <span>Customer (optional)</span>
+            <input
+              class="ims-input"
+              placeholder="Leave empty for shop total, or search..."
+              autocomplete="off"
+              [value]="customerDropdownOpen() ? customerSearchControl.getRawValue() : (selectedCustomer()?.name ?? '')"
+              (input)="customerSearchControl.setValue($any($event.target).value)"
+              (focus)="customerDropdownOpen.set(true)"
+            />
+          </div>
+
+          @if (customerDropdownOpen() && customerHits().length > 0) {
+            <div class="stats-dropdown">
+              @for (customer of customerHits(); track customer.id) {
+                <button type="button" (click)="selectCustomer(customer)">
+                  <strong style="font-weight: 700">{{ customer.name }}</strong>
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="stats-pill-group">
+          <button type="button" class="stats-pill" [class.stats-pill--on]="customerMode() === 'transactions'" (click)="setCustomerMode('transactions')">Transactions</button>
+          <button type="button" class="stats-pill" [class.stats-pill--on]="customerMode() === 'daily'" (click)="setCustomerMode('daily')">Daily</button>
+        </div>
+
+        <div class="stats-field">
+          <span>From</span>
+          <input type="datetime-local" class="ims-input" [value]="datetimeLocalValue(rangeCustomer().dateFrom)" (change)="updateCustomerRange('dateFrom', $any($event.target).value)" />
+        </div>
+        <div class="stats-field">
+          <span>To</span>
+          <input type="datetime-local" class="ims-input" [value]="datetimeLocalValue(rangeCustomer().dateTo)" (change)="updateCustomerRange('dateTo', $any($event.target).value)" />
+        </div>
+
+        @if (selectedCustomer()) {
+          <button type="button" class="stats-btn-ghost" (click)="clearCustomer()">Clear customer</button>
+        }
+      </div>
+
+      @if (cashSummaryLoading()) {
+        <div class="stats-skeleton" style="height: 120px"></div>
+      } @else if (cashSummaryError()) {
+        <p style="color: var(--ims-danger)">Failed to load report.</p>
+      } @else if (cashSummaryData()) {
+        <div class="stats-kpi-row stats-kpi-row--4">
+          <div class="stats-kpi">
+            <div class="stats-kpi__label">Documents</div>
+            <div class="stats-kpi__value">{{ cashSummaryData()?.documentCount ?? 0 }}</div>
+          </div>
+          <div class="stats-kpi">
+            <div class="stats-kpi__label">Total qty</div>
+            <div class="stats-kpi__value">{{ formatDecimal(cashSummaryData()?.totalQuantity) }}</div>
+          </div>
+          <div class="stats-kpi">
+            <div class="stats-kpi__label">Total amount</div>
+            <div class="stats-kpi__value">{{ formatMoney(cashSummaryData()?.totalAmountMkd) }}</div>
+          </div>
+          <div class="stats-kpi">
+            <div class="stats-kpi__label">Paid</div>
+            <div class="stats-kpi__value">{{ formatMoney(cashSummaryData()?.totalPaidMkd) }}</div>
+          </div>
+        </div>
+      }
+
+      @if (!selectedCustomer() && customerMode() === 'daily') {
+        @if (cashDailyLoading()) {
+          <div class="stats-skeleton" style="height: 160px"></div>
+        } @else if (cashDailyError()) {
+          <p style="color: var(--ims-danger)">Failed to load report.</p>
+        } @else if (cashDailyAllData()) {
+          <div class="ims-data-table-wrap">
+            <table class="ims-data-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th style="text-align: right">Qty</th>
+                  <th style="text-align: right">Amount (MKD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (cashDailyAllData()!.length === 0) {
+                  <tr><td colspan="3">No sales in this period.</td></tr>
+                } @else {
+                  @for (row of cashDailyAllData()!; track row.day) {
+                    <tr>
+                      <td>{{ formatDateOnly(row.day) }}</td>
+                      <td style="text-align: right">{{ formatDecimal(row.totalQuantity) }}</td>
+                      <td style="text-align: right">{{ formatMoney(row.totalAmountMkd) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+
+      @if (selectedCustomer() && customerMode() === 'transactions') {
+        @if (customerTxLoading()) {
+          <div class="stats-skeleton" style="height: 160px"></div>
+        } @else if (customerTxError()) {
+          <p style="color: var(--ims-danger)">Failed to load report.</p>
+        } @else if (customerTxData()) {
+          <div class="ims-data-table-wrap">
+            <table class="ims-data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Document</th>
+                  <th>Product</th>
+                  <th>Article</th>
+                  <th style="text-align: right">Qty</th>
+                  <th style="text-align: right">Unit</th>
+                  <th style="text-align: right">Line total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (customerTxData()!.length === 0) {
+                  <tr><td colspan="7">No lines in this period.</td></tr>
+                } @else {
+                  @for (row of customerTxData()!; track row.documentNumber + '-' + $index) {
+                    <tr>
+                      <td>{{ formatDateTime(row.documentDate) }}</td>
+                      <td>{{ row.documentNumber }}</td>
+                      <td>{{ row.productName }}</td>
+                      <td>{{ row.articleNumber || '-' }}</td>
+                      <td style="text-align: right">{{ formatDecimal(row.quantity) }}</td>
+                      <td style="text-align: right">{{ formatMoney(row.unitPriceMkd) }}</td>
+                      <td style="text-align: right">{{ formatMoney(row.lineTotalMkd) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+
+      @if (selectedCustomer() && customerMode() === 'daily') {
+        @if (customerDailyLoading()) {
+          <div class="stats-skeleton" style="height: 160px"></div>
+        } @else if (customerDailyError()) {
+          <p style="color: var(--ims-danger)">Failed to load report.</p>
+        } @else if (customerDailyData()) {
+          <div class="ims-data-table-wrap">
+            <table class="ims-data-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th style="text-align: right">Qty</th>
+                  <th style="text-align: right">Amount (MKD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (customerDailyData()!.length === 0) {
+                  <tr><td colspan="3">No sales in this period.</td></tr>
+                } @else {
+                  @for (row of customerDailyData()!; track row.day) {
+                    <tr>
+                      <td>{{ formatDateOnly(row.day) }}</td>
+                      <td style="text-align: right">{{ formatDecimal(row.totalQuantity) }}</td>
+                      <td style="text-align: right">{{ formatMoney(row.totalAmountMkd) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </section>
+  }
+
+  @if (tab() === 'wholesale-retail') {
+    <section class="stats-panel">
+      <div class="stats-panel__head">
+        <div>
+          <h3 class="stats-panel__title">Wholesale &amp; retail overlap</h3>
+          <p class="stats-panel__desc">
+            Customers with at least one confirmed <strong>retail</strong> sale and one <strong>invoice</strong> document in the same window.
+          </p>
+        </div>
+      </div>
+
+      <div class="stats-range-chips">
+        <span style="font-size: 0.78rem; color: var(--ims-text-muted)">Quick:</span>
+        @for (item of [{label:'24h',h:24},{label:'7d',h:168},{label:'30d',h:720}]; track item.label) {
+          <button type="button" class="stats-chip" (click)="setWholesaleQuickRange(item.h)">{{ item.label }}</button>
+        }
+      </div>
+
+      <div class="stats-filters">
+        <div class="stats-field">
+          <span>From</span>
+          <input type="datetime-local" class="ims-input" [value]="datetimeLocalValue(draftWholesale().dateFrom)" (change)="updateDraftWholesale('dateFrom', $any($event.target).value)" />
+        </div>
+        <div class="stats-field">
+          <span>To</span>
+          <input type="datetime-local" class="ims-input" [value]="datetimeLocalValue(draftWholesale().dateTo)" (change)="updateDraftWholesale('dateTo', $any($event.target).value)" />
+        </div>
+        <button type="button" class="stats-btn-accent" (click)="applyWholesaleRange()">Apply range</button>
+      </div>
+
+      @if (wholesaleLoading()) {
+        <div class="stats-skeleton" style="height: 120px"></div>
+      } @else if (wholesaleError()) {
+        <p style="color: var(--ims-danger)">Failed to load data.</p>
+      } @else if (wholesaleData()) {
+        <div class="ims-data-table-wrap">
+          <table class="ims-data-table">
+            <thead><tr><th>Customer</th></tr></thead>
+            <tbody>
+              @if (wholesaleData()!.length === 0) {
+                <tr><td>No customers match this period.</td></tr>
+              } @else {
+                @for (row of wholesaleData()!; track row.customerId) {
+                  <tr><td>{{ row.customerName }}</td></tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  @if (tab() === 'product') {
+    <section class="stats-panel">
+      <div class="stats-panel__head">
+        <div>
+          <h3 class="stats-panel__title">Product movement &amp; trend</h3>
+          <p class="stats-panel__desc">
+            Pick a product, pick a window, then inspect daily sales momentum, sale lines, and confirmed supply receipts.
+          </p>
+        </div>
+      </div>
+
+      @if (selectedProduct()) {
+        <div class="stats-product-pill">
+          <div class="stats-product-pill__meta">
+            <div class="stats-product-pill__name">{{ selectedProduct()?.name }}</div>
+            <div class="stats-product-pill__art">
+              {{ selectedProduct()?.articleNumber ? ('Article ' + selectedProduct()?.articleNumber) : ('ID ' + selectedProduct()?.id) }}
+            </div>
+          </div>
+          <button type="button" class="stats-product-pill__clear" title="Clear product" aria-label="Clear product" (click)="clearSelectedProduct()">x</button>
+        </div>
+      }
+
+      <div class="stats-search-wrap" style="margin-bottom: 12px">
+        <div class="stats-field stats-field--grow">
+          <span>Search product</span>
+          <input
+            class="ims-input"
+            [placeholder]="selectedProduct() ? 'Type to search for a different product...' : 'Name, article number...'"
+            autocomplete="off"
+            [value]="productDropdownOpen() ? productSearchControl.getRawValue() : (!selectedProduct() ? productSearchControl.getRawValue() : '')"
+            (input)="productSearchControl.setValue($any($event.target).value); productDropdownOpen.set(true); selectedProduct.set(null)"
+            (focus)="productDropdownOpen.set(true)"
+          />
+        </div>
+
+        @if (productDropdownOpen() && productList().length > 0) {
+          <div class="stats-dropdown">
+            @for (product of productList(); track product.id) {
+              <button type="button" (click)="selectProduct(product)">
+                <strong style="font-weight: 700">{{ product.name }}</strong>
+                @if (product.articleNumber) {
+                  <span style="color: var(--ims-text-muted)"> - {{ product.articleNumber }}</span>
+                }
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="stats-range-chips">
+        <span style="font-size: 0.78rem; color: var(--ims-text-muted)">Range:</span>
+        @for (item of [{label:'24h',h:24},{label:'7d',h:168},{label:'30d',h:720}]; track item.label) {
+          <button type="button" class="stats-chip" [disabled]="!selectedProduct()" (click)="setProductQuickRange(item.h)">{{ item.label }}</button>
+        }
+      </div>
+
+      <div class="stats-filters">
+        <div class="stats-field">
+          <span>From</span>
+          <input type="datetime-local" class="ims-input" [value]="datetimeLocalValue(draftProductStats().dateFrom)" (change)="updateDraftProductStats('dateFrom', $any($event.target).value)" />
+        </div>
+        <div class="stats-field">
+          <span>To</span>
+          <input type="datetime-local" class="ims-input" [value]="datetimeLocalValue(draftProductStats().dateTo)" (change)="updateDraftProductStats('dateTo', $any($event.target).value)" />
+        </div>
+        <button type="button" class="stats-btn-accent" [disabled]="!selectedProduct()" (click)="applyProductStatsRange()">Load data</button>
+      </div>
+
+      @if (!selectedProduct()) {
+        <p style="color: var(--ims-text-muted); margin-top: 8px">Search and select a product to see charts and tables.</p>
+      }
+
+      @if (selectedProduct() && productStatsLoading()) {
+        <div style="display: grid; gap: 12px; margin-top: 16px">
+          <div class="stats-skeleton" style="height: 48px"></div>
+          <div class="stats-skeleton" style="height: 220px"></div>
+          <div class="stats-skeleton" style="height: 140px"></div>
+        </div>
+      } @else if (selectedProduct() && productStatsError()) {
+        <p style="color: var(--ims-danger); margin-top: 12px">Failed to load statistics.</p>
+      } @else if (selectedProduct() && productStatsData()) {
+        <div style="display: grid; gap: 26px; margin-top: 8px">
+          @if (productKpis()) {
+            <div class="stats-kpi-row">
+              <div class="stats-kpi">
+                <div class="stats-kpi__label">Sold (period)</div>
+                <div class="stats-kpi__value">{{ formatDecimal(productKpis()!.saleQty) }}</div>
+                <div class="stats-kpi__hint">{{ productKpis()!.saleLines }} sale line{{ productKpis()!.saleLines === 1 ? '' : 's' }}</div>
+              </div>
+              <div class="stats-kpi">
+                <div class="stats-kpi__label">Supplied (period)</div>
+                <div class="stats-kpi__value">{{ formatDecimal(productKpis()!.supplyQty) }}</div>
+                <div class="stats-kpi__hint">{{ productKpis()!.supplyLines }} supply line{{ productKpis()!.supplyLines === 1 ? '' : 's' }}</div>
+              </div>
+              <div class="stats-kpi">
+                <div class="stats-kpi__label">Trend days</div>
+                <div class="stats-kpi__value">{{ trend().length }}</div>
+                <div class="stats-kpi__hint">Days with sales qty</div>
+              </div>
+            </div>
+          }
+
+          <div>
+            <div class="stats-section-title">Sales trend</div>
+            <p style="margin: 0 0 10px; font-size: 0.85rem; color: var(--ims-text-muted)">
+              Move the mouse across the chart - tooltip shows day and quantity.
+            </p>
+            <app-sales-trend-chart [trend]="trend()" [formatDateLabel]="formatDateOnly.bind(this)" />
+          </div>
+
+          <div>
+            <div class="stats-section-title">Sale history</div>
+            <div class="ims-data-table-wrap">
+              <table class="ims-data-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Document</th>
+                    <th style="text-align: right">Qty</th>
+                    <th style="text-align: right">Unit</th>
+                    <th style="text-align: right">Line</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if ((productStatsData()?.saleHistory?.length ?? 0) === 0) {
+                    <tr><td colspan="5">No sale lines.</td></tr>
+                  } @else {
+                    @for (row of productStatsData()?.saleHistory ?? []; track row.documentNumber + '-' + $index) {
+                      <tr>
+                        <td>{{ formatDateTime(row.documentDate) }}</td>
+                        <td>{{ row.documentNumber }}</td>
+                        <td style="text-align: right">{{ formatDecimal(row.quantity) }}</td>
+                        <td style="text-align: right">{{ formatMoney(row.unitPriceMkd) }}</td>
+                        <td style="text-align: right">{{ formatMoney(row.lineTotalMkd) }}</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <div class="stats-section-title">Supply history</div>
+            <div class="ims-data-table-wrap">
+              <table class="ims-data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Document</th>
+                    <th style="text-align: right">Qty</th>
+                    <th style="text-align: right">Purchase / unit</th>
+                    <th style="text-align: right">Line purchase</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if ((productStatsData()?.supplyHistory?.length ?? 0) === 0) {
+                    <tr><td colspan="5">No supply lines.</td></tr>
+                  } @else {
+                    @for (row of productStatsData()?.supplyHistory ?? []; track row.documentNumber + '-' + $index) {
+                      <tr>
+                        <td>{{ formatDateOnly(row.documentDate) }}</td>
+                        <td>{{ row.documentNumber }}</td>
+                        <td style="text-align: right">{{ formatDecimal(row.quantity) }}</td>
+                        <td style="text-align: right">{{ formatMoney(row.purchasePriceMkd) }}</td>
+                        <td style="text-align: right">{{ formatMoney(row.linePurchaseTotalMkd) }}</td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  }
+</div>

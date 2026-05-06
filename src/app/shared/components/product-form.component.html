@@ -1,0 +1,116 @@
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <div class="ims-drawer-fields">
+    <div>
+      <label>Product Name</label>
+      <input placeholder="Product name" formControlName="name" />
+    </div>
+
+    <div>
+      <label>Article Number</label>
+      <input placeholder="Manufacturer article number" formControlName="articleNumber" />
+    </div>
+
+    <div>
+      <label>Barcode</label>
+      <input placeholder="Barcode / EAN" formControlName="barcode" />
+    </div>
+
+    <div>
+      <label>Brand</label>
+      <select formControlName="brandId">
+        <option value="">Select brand</option>
+        @for (brand of brands; track brand.id) {
+          <option [value]="brand.id">{{ brand.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label>Category</label>
+      <select formControlName="categoryId">
+        <option value="">Select category</option>
+        @for (category of categories; track category.id) {
+          <option [value]="category.id">{{ category.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label>Shelf (Rafti)</label>
+      <input placeholder="Shelf location" formControlName="shelf" />
+    </div>
+
+    <div>
+      <label>Packaging Quantity</label>
+      <input type="number" step="0.01" min="0.01" placeholder="1.00" formControlName="packagingQuantity" />
+    </div>
+
+    <div>
+      <label>Supplier Price (EUR)</label>
+      <input type="number" step="0.01" placeholder="EUR" formControlName="lastSupplierPriceEur" />
+    </div>
+
+    <div class="ims-form-grid-2">
+      @if (isEditMode) {
+        <div>
+          <label>Cost (MKD)</label>
+          <input type="number" step="0.01" placeholder="Last purchase MKD" formControlName="lastPurchasePriceMkd" />
+        </div>
+      }
+
+      <div [style.grid-column]="!isEditMode ? '1 / -1' : null">
+        <label>Retail Price (MKD)</label>
+        <input type="number" step="0.01" placeholder="Retail MKD" formControlName="retailPriceMkd" />
+      </div>
+    </div>
+
+    <div>
+      <label>VAT Rate</label>
+      <input type="number" step="0.01" placeholder="VAT %" formControlName="vatRate" />
+    </div>
+
+    <div>
+      <label>Description</label>
+      <textarea rows="3" placeholder="Notes / description" formControlName="description"></textarea>
+    </div>
+
+    <label class="ims-checkbox-row">
+      <input type="checkbox" formControlName="active" />
+      Active
+    </label>
+
+    <div style="margin-top: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb">
+      <h4 style="margin-top: 0; margin-bottom: 12px">TecDoc Link</h4>
+
+      <div class="ims-form-grid-2">
+        <div>
+          <label>TecDoc Article ID</label>
+          <input type="number" placeholder="TecDoc article ID" formControlName="tecdocArticleId" />
+        </div>
+
+        <div>
+          <label>TecDoc Supplier ID</label>
+          <input type="number" placeholder="TecDoc supplier ID" formControlName="tecdocSupplierId" />
+        </div>
+      </div>
+
+      <div style="margin-top: 12px">
+        <label>TecDoc Image URL</label>
+        <input placeholder="TecDoc image URL" formControlName="tecdocImageUrl" />
+      </div>
+    </div>
+  </div>
+
+  @if (variant === 'drawer') {
+    <div class="ims-drawer-form-actions">
+      <button type="button" class="ims-btn-secondary-light" (click)="cancelled.emit()">Cancel</button>
+      <button type="submit" [disabled]="saving" class="ims-btn-cta ims-drawer-save">
+        {{ saving ? 'Saving...' : submitLabel }}
+      </button>
+    </div>
+  } @else {
+    <button type="submit" [disabled]="saving" class="ims-btn-primary" style="width: auto; margin-top: 8px">
+      {{ saving ? 'Saving...' : submitLabel }}
+    </button>
+  }
+</form>

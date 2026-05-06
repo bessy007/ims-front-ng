@@ -1,0 +1,10 @@
+<header class="ims-header">
+  <div class="ims-header__spacer" aria-hidden="true"></div>
+
+  <div class="ims-header__user">
+    <button type="button" class="ims-header__logout" (click)="logout()">Logout</button>
+    <div class="ims-header__avatar" [title]="user()?.username ?? 'User'">
+      {{ initials() }}
+    </div>
+  </div>
+</header>

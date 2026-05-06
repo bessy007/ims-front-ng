@@ -1,0 +1,142 @@
+<div class="ims-customers-page">
+  <header class="ims-customers-page__hero">
+    <div>
+      <p class="ims-overline">Customer management</p>
+      <h1 class="ims-customers-page__title">Customers</h1>
+      <p class="ims-customers-page__count">
+        {{ totalCount() }} {{ totalCount() === 1 ? 'customer' : 'customers' }}
+      </p>
+    </div>
+    <button type="button" class="ims-btn-add-customer" (click)="scrollToForm()">Add new customer</button>
+  </header>
+
+  <div class="ims-search-wide">
+    <label for="customers-search">Search customers</label>
+    <input
+      id="customers-search"
+      type="text"
+      placeholder="Search by name, phone, email, address, or VAT number"
+      [formControl]="searchControl"
+    />
+  </div>
+
+  <div class="ims-customers-grid">
+    <section class="ims-card">
+      <h2 class="ims-card__title">Customers list</h2>
+      <p class="ims-card__subtitle">
+        {{ fetching() ? 'Searching...' : customers().length + ' customers found' }}
+      </p>
+
+      @if (loading()) {
+        <p style="color: var(--ims-text-muted)">Loading customers...</p>
+      } @else if (customers().length === 0) {
+        <p style="color: var(--ims-text-muted); margin: 0">No customers found.</p>
+      } @else {
+        <div class="ims-data-table-wrap" style="margin-bottom: 0">
+          <table class="ims-data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (customer of customers(); track customer.id) {
+                <tr>
+                  <td>
+                    <strong>{{ customer.name }}</strong>
+                    @if (customer.vatNumber) {
+                      <div style="font-size: 0.82rem; color: var(--ims-text-muted); margin-top: 4px">
+                        VAT: {{ customer.vatNumber }}
+                      </div>
+                    }
+                  </td>
+                  <td>{{ customer.phone || '—' }}</td>
+                  <td>{{ customer.email || '—' }}</td>
+                  <td>
+                    <div class="ims-table-actions">
+                      <button type="button" (click)="editCustomer(customer)">Edit</button>
+                      <button
+                        type="button"
+                        class="ims-btn-danger-text"
+                        [disabled]="deleting()"
+                        (click)="deleteCustomer(customer)"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="ims-card" #formAnchor id="customer-form-panel">
+      <div class="ims-card-header-row">
+        <div>
+          <p class="ims-overline">{{ isEditing() ? 'Edit customer' : 'New customer' }}</p>
+          <h2 class="ims-card__title">{{ isEditing() ? 'Edit Customer' : 'Add Customer' }}</h2>
+        </div>
+        <button type="button" class="ims-btn-outline-ghost" (click)="clearForm()">Clear form</button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div style="display: grid; gap: 14px">
+          <div>
+            <label for="customer-name">Name *</label>
+            <input id="customer-name" type="text" placeholder="Customer name" formControlName="name" />
+          </div>
+
+          <div class="ims-form-grid-2">
+            <div>
+              <label for="customer-phone">Phone</label>
+              <input id="customer-phone" type="text" placeholder="Phone number" formControlName="phone" />
+            </div>
+            <div>
+              <label for="customer-email">Email</label>
+              <input id="customer-email" type="email" placeholder="Email address" formControlName="email" />
+            </div>
+          </div>
+
+          <div>
+            <label for="customer-address">Address</label>
+            <input id="customer-address" type="text" placeholder="Full address" formControlName="address" />
+          </div>
+
+          <div>
+            <label for="customer-vat">VAT number</label>
+            <input id="customer-vat" type="text" placeholder="VAT number" formControlName="vatNumber" />
+          </div>
+
+          <div class="ims-customers-form-actions">
+            <button type="submit" class="ims-btn-cta" [disabled]="saving()" style="flex: 1 1 180px">
+              {{
+                saving()
+                  ? 'Saving...'
+                  : isEditing()
+                    ? 'Update Customer'
+                    : 'Create Customer'
+              }}
+            </button>
+            @if (isEditing()) {
+              <button
+                type="button"
+                class="ims-btn-secondary-light"
+                style="flex: 0 1 auto"
+                [disabled]="saving()"
+                (click)="clearForm()"
+              >
+                Cancel
+              </button>
+            }
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>

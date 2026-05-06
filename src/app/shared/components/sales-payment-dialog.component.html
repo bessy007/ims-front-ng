@@ -1,0 +1,40 @@
+@if (open) {
+  <div class="ims-modal-root">
+    <div class="ims-modal-backdrop" (click)="cancel.emit()"></div>
+    <div class="ims-modal-panel" style="max-width: 420px">
+      <div class="ims-modal-header">
+        <div>
+          <h2 class="ims-modal-title">Update Payment</h2>
+          <p class="ims-page-subtitle">Total amount: {{ totalAmount | number: '1.2-2' }} MKD</p>
+        </div>
+        <button type="button" class="ims-drawer-close" (click)="cancel.emit()">×</button>
+      </div>
+
+      <div class="ims-modal-body" style="display: grid; gap: 12px">
+        <div>
+          <label for="sales-paid-total">Paid total</label>
+          <input
+            id="sales-paid-total"
+            type="number"
+            min="0"
+            step="0.01"
+            [value]="paidTotal"
+            (input)="paidTotalChange.emit(($any($event.target).value))"
+          />
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <button type="button" (click)="setFull.emit()">Set Full</button>
+          <button type="button" (click)="setZero.emit()">Set Zero</button>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button type="button" (click)="cancel.emit()">Cancel</button>
+          <button type="button" class="ims-btn-primary" [disabled]="saving" (click)="confirm.emit()">
+            {{ saving ? 'Saving...' : 'Confirm' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

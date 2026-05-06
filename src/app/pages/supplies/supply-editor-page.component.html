@@ -1,0 +1,217 @@
+@if (loading()) {
+  <p>Loading supply document...</p>
+} @else {
+  <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px">
+    <div>
+      <div class="ims-page-heading" style="margin-bottom: 16px">
+        <h1 class="ims-page-title">
+          {{ supplyDocumentId ? ('Supply #' + (supplyDocument()?.documentNumber ?? supplyDocumentId)) : 'New Supply' }}
+        </h1>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <button type="button" (click)="goBackToDraftSupplies()">Back to Draft Supplies</button>
+
+          @if (supplyDocumentId && supplyDocument()?.status === 'DRAFT') {
+            <button type="button" [disabled]="busy()" (click)="deleteDraft()">
+              {{ busy() ? 'Deleting...' : 'Delete Draft' }}
+            </button>
+          }
+
+          @if (supplyDocumentId && supplyDocument()?.status === 'CONFIRMED') {
+            <button type="button" [disabled]="busy()" (click)="reopenSupply()">
+              {{ busy() ? 'Reopening...' : 'Reopen Supply' }}
+            </button>
+          }
+
+          @if (supplyDocumentId) {
+            <button type="button" (click)="previewPdf()">Preview PDF</button>
+            <button type="button" (click)="downloadPdf()">Download PDF</button>
+          }
+        </div>
+      </div>
+
+      <div class="ims-card" [formGroup]="form">
+        <h3 class="ims-card__title">Supply Header</h3>
+
+        <div style="display: grid; gap: 12px">
+          <div class="ims-form-grid-2">
+            <div>
+              <label>Supplier</label>
+              <select formControlName="selectedSupplierId" [disabled]="isConfirmed">
+                <option value="">Select supplier</option>
+                @for (supplier of suppliers(); track supplier.id) {
+                  <option [value]="supplier.id">{{ supplier.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label>Warehouse</label>
+              <select formControlName="selectedWarehouseId" [disabled]="isConfirmed">
+                <option value="">Select warehouse</option>
+                @for (warehouse of warehouses(); track warehouse.id) {
+                  <option [value]="warehouse.id">{{ warehouse.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="ims-form-grid-2">
+            <div>
+              <label>Document Date</label>
+              <input type="date" formControlName="documentDate" [readOnly]="isConfirmed" />
+            </div>
+            <div>
+              <label>Invoice Date</label>
+              <input type="date" formControlName="invoiceDate" [readOnly]="isConfirmed" />
+            </div>
+          </div>
+
+          <div class="ims-form-grid-2">
+            <div>
+              <label>Invoice Number</label>
+              <input type="text" formControlName="invoiceNumber" [readOnly]="isConfirmed" />
+            </div>
+            <div>
+              <label>Exchange Rate</label>
+              <input type="number" min="0" step="0.01" formControlName="exchangeRate" [readOnly]="isConfirmed" />
+            </div>
+          </div>
+
+          <div class="ims-form-grid-2">
+            <div>
+              <label>M1 %</label>
+              <input type="number" min="0" step="0.01" formControlName="m1Percent" [readOnly]="isConfirmed" />
+            </div>
+            <div>
+              <label>M2 %</label>
+              <input type="number" min="0" step="0.01" formControlName="m2Percent" [readOnly]="isConfirmed" />
+            </div>
+          </div>
+
+          <div>
+            <label>Note</label>
+            <textarea rows="3" formControlName="note" [readOnly]="isConfirmed"></textarea>
+          </div>
+
+          @if (!isConfirmed) {
+            <div>
+              <button type="button" [disabled]="busy()" (click)="saveHeader()">
+                {{ busy() ? 'Saving...' : 'Save Header' }}
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="ims-card" [formGroup]="form">
+        <h3 class="ims-card__title">Product Search</h3>
+        <input
+          placeholder="Search product..."
+          formControlName="search"
+          [readOnly]="isConfirmed"
+        />
+
+        <div style="margin-top: 16px">
+          @if (productSearchLoading()) {
+            <p>Loading products...</p>
+          } @else if (productSearchError()) {
+            <p>Failed to load products.</p>
+          } @else if (products().length === 0) {
+            <p style="color: var(--ims-text-muted)">No products found.</p>
+          } @else {
+            @for (product of products(); track product.id) {
+              <div class="ims-list-row" style="display: flex; justify-content: space-between; gap: 12px; align-items: center">
+                <div>
+                  <strong>{{ product.name }}</strong>
+                  <div style="color: var(--ims-text-muted)">
+                    {{ product.articleNumber || '-' }} | Stock: {{ product.stockQuantity ?? 0 }}
+                  </div>
+                </div>
+                @if (!isConfirmed) {
+                  <button type="button" [disabled]="busy()" (click)="addItem(product)">Add</button>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="ims-card">
+        <h3 class="ims-card__title">Supply Items</h3>
+
+        @if (items.length === 0) {
+          <p style="color: var(--ims-text-muted)">No items added yet.</p>
+        } @else {
+          <div class="ims-data-table-wrap">
+            <table class="ims-data-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th class="ims-num">Qty</th>
+                  <th class="ims-num">Supplier EUR</th>
+                  <th class="ims-num">Retail MKD</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of items; track item.id) {
+                  <tr>
+                    <td>{{ item.productName || ('Product ' + item.productId) }}</td>
+                    <td class="ims-num">
+                      @if (isConfirmed) {
+                        {{ item.quantity }}
+                      } @else {
+                        <input
+                          type="number"
+                          min="0"
+                          [value]="item.quantity"
+                          (input)="updateItem(item, 'quantity', $any($event.target).value)"
+                        />
+                      }
+                    </td>
+                    <td class="ims-num">
+                      @if (isConfirmed) {
+                        {{ item.supplierUnitPriceEur | number:'1.2-2' }}
+                      } @else {
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          [value]="item.supplierUnitPriceEur"
+                          (input)="updateItem(item, 'supplierUnitPriceEur', $any($event.target).value)"
+                        />
+                      }
+                    </td>
+                    <td class="ims-num">{{ item.totalRetailValueMkd | number:'1.2-2' }}</td>
+                    <td>
+                      @if (!isConfirmed) {
+                        <button type="button" (click)="removeItem(item.id)">Remove</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <div class="ims-card">
+        <h3 class="ims-card__title">Totals</h3>
+        <div style="display: grid; gap: 8px">
+          <div><strong>Total Purchase MKD:</strong> {{ totals.purchase | number:'1.2-2' }}</div>
+          <div><strong>Total Retail MKD:</strong> {{ totals.retail | number:'1.2-2' }}</div>
+        </div>
+
+        @if (!isConfirmed) {
+          <div style="margin-top: 16px">
+            <button type="button" [disabled]="busy() || !supplyDocumentId" (click)="confirmSupply()">Confirm Supply</button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

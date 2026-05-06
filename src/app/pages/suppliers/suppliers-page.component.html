@@ -1,0 +1,45 @@
+<div>
+  <h1 class="ims-page-title">Suppliers</h1>
+
+  <form class="ims-card" [formGroup]="form" (ngSubmit)="submit()">
+    <h3 class="ims-card__title">Add Supplier</h3>
+
+    <div style="display: grid; gap: 12px">
+      <input type="text" placeholder="Supplier name" formControlName="name" required />
+      <input type="text" placeholder="Contact person" formControlName="contactPerson" />
+      <input type="text" placeholder="Phone" formControlName="phone" />
+      <input type="email" placeholder="Email" formControlName="email" />
+      <textarea placeholder="Address" formControlName="address"></textarea>
+
+      <label style="display: flex; gap: 8px; align-items: center">
+        <input type="checkbox" formControlName="active" />
+        Active
+      </label>
+
+      <button type="submit" class="ims-btn-primary ims-btn-block" [disabled]="saving()">
+        {{ saving() ? 'Saving...' : 'Save Supplier' }}
+      </button>
+    </div>
+  </form>
+
+  <div class="ims-card">
+    <h3 class="ims-card__title">Supplier List</h3>
+
+    @if (loading()) {
+      <p style="color: var(--ims-text-muted)">Loading suppliers...</p>
+    } @else if (suppliers().length === 0) {
+      <p style="color: var(--ims-text-muted)">No suppliers found.</p>
+    } @else {
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        @for (supplier of suppliers(); track supplier.id) {
+          <div class="ims-list-row">
+            <strong>{{ supplier.name }}</strong>
+            <div>Contact: {{ supplier.contactPerson || '-' }}</div>
+            <div>Phone: {{ supplier.phone || '-' }}</div>
+            <div>Email: {{ supplier.email || '-' }}</div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

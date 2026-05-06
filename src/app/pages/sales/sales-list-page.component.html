@@ -1,0 +1,189 @@
+<div (click)="closeContextMenu()">
+  <h1 class="ims-page-title">Sales List</h1>
+
+  <div class="ims-panel">
+    <div class="ims-filter-grid">
+      <input
+        placeholder="Search number..."
+        [value]="filtersForm.controls.q.getRawValue()"
+        (input)="setFilterValue('q', $any($event.target).value)"
+      />
+
+      <div style="position: relative">
+        <input
+          placeholder="Customer..."
+          [formControl]="filtersForm.controls.customerSearch"
+          (focus)="filtersForm.controls.customerSearch.getRawValue().trim().length > 0 ? showCustomerDropdown.set(true) : null"
+        />
+
+        @if (selectedCustomer()) {
+          <div style="font-size: 12px; margin-top: 4px; color: green">Selected registered customer</div>
+        }
+        @if (!selectedCustomer() && filtersForm.controls.customerSearch.getRawValue().trim().length > 0) {
+          <div style="font-size: 12px; margin-top: 4px; color: #b45309">Please select a valid customer from the list</div>
+        }
+
+        @if (showCustomerDropdown() && filtersForm.controls.customerSearch.getRawValue().trim().length > 0) {
+          <div style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 6px; margin-top: 4px; max-height: 220px; overflow-y: auto; z-index: 20; box-shadow: 0 4px 12px rgba(0,0,0,0.08)">
+            @if (customersLoading()) {
+              <div style="padding: 10px">Searching customers...</div>
+            } @else if (customerOptions().length === 0) {
+              <div style="padding: 10px">No customers found</div>
+            } @else {
+              @for (customer of customerOptions(); track customer.id) {
+                <button type="button" class="ims-btn-ghost" (click)="selectCustomer(customer)">
+                  <div style="font-weight: 600">{{ customer.name }}</div>
+                </button>
+              }
+            }
+          </div>
+        }
+
+        @if (selectedCustomer() || filtersForm.controls.customerSearch.getRawValue()) {
+          <button type="button" style="margin-top: 6px" (click)="clearCustomer()">Clear customer</button>
+        }
+      </div>
+
+      <div>
+        <div style="display: flex; gap: 6px">
+          <input
+            placeholder="Date from (dd.mm.yyyy)"
+            [value]="filtersForm.controls.dateFrom.getRawValue()"
+            (input)="setDateText('dateFrom', $any($event.target).value)"
+          />
+          <input
+            type="date"
+            [value]="dateTextToHtmlDate(filtersForm.controls.dateFrom.getRawValue())"
+            (change)="setDateCalendar('dateFrom', $any($event.target).value)"
+            style="width: 44px"
+            title="Pick date"
+          />
+        </div>
+        @if (filtersForm.controls.dateFrom.getRawValue() && !isValidDateFormat(filtersForm.controls.dateFrom.getRawValue())) {
+          <div style="font-size: 12px; color: red; margin-top: 4px">Use format dd.mm.yyyy</div>
+        }
+      </div>
+
+      <div>
+        <div style="display: flex; gap: 6px">
+          <input
+            placeholder="Date to (dd.mm.yyyy)"
+            [value]="filtersForm.controls.dateTo.getRawValue()"
+            (input)="setDateText('dateTo', $any($event.target).value)"
+          />
+          <input
+            type="date"
+            [value]="dateTextToHtmlDate(filtersForm.controls.dateTo.getRawValue())"
+            (change)="setDateCalendar('dateTo', $any($event.target).value)"
+            style="width: 44px"
+            title="Pick date"
+          />
+        </div>
+        @if (filtersForm.controls.dateTo.getRawValue() && !isValidDateFormat(filtersForm.controls.dateTo.getRawValue())) {
+          <div style="font-size: 12px; color: red; margin-top: 4px">Use format dd.mm.yyyy</div>
+        }
+      </div>
+
+      <select [value]="filtersForm.controls.paymentMethod.getRawValue()" (change)="setFilterValue('paymentMethod', $any($event.target).value)">
+        <option value="">All payment methods</option>
+        <option value="CASH">Cash</option>
+        <option value="CARD">Card</option>
+      </select>
+
+      <select [value]="filtersForm.controls.paid.getRawValue()" (change)="setFilterValue('paid', $any($event.target).value)">
+        <option value="">All payment states</option>
+        <option value="true">Paid</option>
+        <option value="false">Unpaid</option>
+      </select>
+
+      <button
+        type="button"
+        (click)="loadRows()"
+        [disabled]="!isValidDateFormat(filtersForm.controls.dateFrom.getRawValue()) || !isValidDateFormat(filtersForm.controls.dateTo.getRawValue())"
+      >
+        Refresh
+      </button>
+    </div>
+
+    @if (loading()) {
+      <p>Loading sales...</p>
+    } @else if (error()) {
+      <p>Failed to load sales.</p>
+    } @else {
+      <div class="ims-data-table-wrap">
+        <table class="ims-data-table">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th class="ims-num">Total</th>
+              <th class="ims-num">Paid</th>
+              <th class="ims-num">Remaining</th>
+              <th>Payment</th>
+              <th>Paid Date</th>
+              <th>Fiscalized</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (rows().length === 0) {
+              <tr><td colspan="10">No sales found.</td></tr>
+            } @else {
+              @for (row of rows(); track row.id) {
+                <tr
+                  (click)="openDocument(row)"
+                  (contextmenu)="openContextMenu($event, row)"
+                  style="cursor: pointer"
+                  title="Left click to open, right click for actions"
+                >
+                  <td>{{ row.documentNumber }}</td>
+                  <td>{{ row.documentType }}</td>
+                  <td>{{ formatDate(row.documentDate) }}</td>
+                  <td>{{ row.customerName || '-' }}</td>
+                  <td class="ims-num">{{ formatMoney(row.totalAmount) }}</td>
+                  <td class="ims-num">{{ formatMoney(row.paidTotal) }}</td>
+                  <td class="ims-num">{{ formatMoney(getRemainingAmount(row)) }}</td>
+                  <td>{{ row.paymentMethod || '-' }}</td>
+                  <td>{{ formatDate(row.paidDate) }}</td>
+                  <td>{{ row.fiscalized ? 'Yes' : 'No' }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 16px; align-items: center">
+        <button type="button" [disabled]="page() <= 0" (click)="previousPage()">Previous</button>
+        <span>Page {{ page() + 1 }} of {{ Math.max(totalPages(), 1) }}</span>
+        <button type="button" [disabled]="page() + 1 >= totalPages()" (click)="nextPage()">Next</button>
+      </div>
+    }
+  </div>
+
+  <app-sales-row-context-menu
+    [open]="contextMenu().open"
+    [x]="contextMenu().x"
+    [y]="contextMenu().y"
+    [row]="contextMenu().row"
+    (close)="closeContextMenu()"
+    (print)="printDocument($event)"
+    (edit)="openDocument($event)"
+    (remove)="deleteDocument($event)"
+    (makePayment)="openPaymentDialog($event)"
+    (fiscalize)="fiscalize($event)"
+  />
+
+  <app-sales-payment-dialog
+    [open]="paymentDialogOpen()"
+    [totalAmount]="selectedDocumentTotal()"
+    [paidTotal]="paymentPaidTotal()"
+    [saving]="paymentSaving()"
+    (paidTotalChange)="paymentPaidTotal.set($event)"
+    (setFull)="setPaymentFull()"
+    (setZero)="paymentPaidTotal.set('0')"
+    (cancel)="paymentDialogOpen.set(false)"
+    (confirm)="confirmPayment()"
+  />
+</div>

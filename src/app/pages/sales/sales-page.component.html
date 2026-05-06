@@ -1,0 +1,323 @@
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px">
+  <div>
+    <h1 class="ims-page-title">Sales</h1>
+    <p class="ims-page-subtitle" style="margin-bottom: 20px">
+      Create a retail sale or invoice, add lines from search, then confirm.
+    </p>
+
+    <div class="ims-card" style="margin-bottom: 16px">
+      <label for="warehouse-select" style="display: block; margin-bottom: 8px; font-weight: 600">
+        Warehouse / Store
+      </label>
+
+      <select
+        id="warehouse-select"
+        [value]="selectedWarehouseId ?? ''"
+        (change)="changeWarehouse(parseWarehouseId($any($event.target).value))"
+      >
+        <option value="" disabled>Select warehouse</option>
+        @for (warehouse of warehouses(); track warehouse.id) {
+          <option [value]="warehouse.id">{{ warehouse.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="ims-card" [formGroup]="headerForm">
+      <h3 class="ims-card__title">Sale Details</h3>
+
+      <div style="display: grid; gap: 12px">
+        <div>
+          <label style="display: block; margin-bottom: 6px; font-weight: 600">Type</label>
+          <select
+            formControlName="documentType"
+            (change)="changeDocumentType($any($event.target).value)"
+          >
+            <option value="RETAIL">Retail</option>
+            <option value="INVOICE">Invoice</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display: block; margin-bottom: 6px; font-weight: 600">Date</label>
+          <input
+            type="datetime-local"
+            [value]="toDateTimeLocalValue(headerForm.controls.documentDate.getRawValue())"
+            (change)="updateDocumentDate($any($event.target).value)"
+          />
+        </div>
+
+        <div>
+          <label style="display: block; margin-bottom: 6px; font-weight: 600">Customer</label>
+          <select formControlName="customerId">
+            <option value="">Walk-in customer</option>
+            @for (customer of customers(); track customer.id) {
+              <option [value]="customer.id">{{ customer.name }}</option>
+            }
+          </select>
+        </div>
+
+        @if (documentType !== 'INVOICE') {
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 600">Payment Method</label>
+            <select formControlName="paymentMethod">
+              <option value="CASH">Cash</option>
+              <option value="CARD">Card</option>
+            </select>
+          </div>
+        }
+
+        <div>
+          <label style="display: block; margin-bottom: 6px; font-weight: 600">Description / Notes</label>
+          <textarea rows="3" formControlName="description"></textarea>
+        </div>
+
+        <label style="display: flex; align-items: center; gap: 8px">
+          <input type="checkbox" formControlName="fiscalized" />
+          Fiscalized
+        </label>
+      </div>
+    </div>
+
+    <div
+      style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 16px"
+    >
+      <h3 style="margin-top: 0">Cart Discount</h3>
+      <div style="display: flex; gap: 8px; align-items: center">
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          [value]="globalDiscount()"
+          (input)="globalDiscount.set($any($event.target).value)"
+          placeholder="Discount % for all items"
+          style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db"
+        />
+        <button
+          type="button"
+          (click)="applyGlobalDiscount()"
+          style="padding: 10px 14px; border-radius: 8px; border: none; background: #111827; color: #fff; cursor: pointer"
+        >
+          Apply to All
+        </button>
+      </div>
+    </div>
+
+    <div class="ims-card" style="margin-bottom: 0">
+      <label for="product-search" style="display: block; margin-bottom: 8px; font-weight: 600">
+        Search Product
+      </label>
+
+      <input
+        id="product-search"
+        type="text"
+        placeholder="Search by name, article number, OEM, barcode..."
+        [formControl]="searchControl"
+      />
+    </div>
+
+    <div style="margin-top: 16px; background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; min-height: 300px">
+      <h3 style="margin-top: 0">Search Results</h3>
+
+      @if (loadingProducts()) {
+        <p style="color: #6b7280">Loading...</p>
+      } @else if (errorProducts()) {
+        <p style="color: red">Failed to load products.</p>
+      } @else if (results().length === 0) {
+        <p style="color: #6b7280">No products found.</p>
+      } @else {
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          @for (product of results(); track product.id) {
+            <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; display: flex; justify-content: space-between; gap: 12px">
+              <div>
+                <strong>{{ product.name }}</strong>
+                <div>Brand: {{ product.brandName || '-' }}</div>
+                <div>Article Number: {{ product.articleNumber || '-' }}</div>
+                <div>OEM: {{ product.oemNumber || '-' }}</div>
+                <div>Barcode: {{ product.barcode || '-' }}</div>
+                <div>Price: {{ product.retailPriceMkd ?? 0 }} MKD</div>
+                <div>Stock: {{ product.stockQuantity ?? 0 }}</div>
+              </div>
+
+              <div style="display: flex; align-items: center">
+                <button
+                  type="button"
+                  (click)="addToCart(product)"
+                  style="padding: 10px 14px; border-radius: 8px; border: none; background: #111827; color: #fff; cursor: pointer; height: fit-content"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div>
+    <div class="ims-card" style="min-height: 300px">
+      <h3 class="ims-card__title">Cart</h3>
+
+      @if (calculatedItems.length === 0) {
+        <p style="color: var(--ims-text-muted); margin: 0">No items added yet.</p>
+      } @else {
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          @for (item of calculatedItems; track item.productId ?? item.id) {
+            <div class="ims-cart-line">
+              <strong>{{ item.productName ?? ('Product ID: ' + item.productId) }}</strong>
+
+              <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center">
+                <span>Qty:</span>
+                <button type="button" (click)="decrementQuantity(item)">-</button>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  [value]="item.quantity === 0 ? '' : (item.quantity ?? '')"
+                  (input)="updateQuantity(item, $any($event.target).value === '' ? '' : $any($event.target).value)"
+                  style="width: 70px; text-align: center"
+                  class="ims-no-spinner"
+                />
+                <button type="button" (click)="incrementQuantity(item)">+</button>
+              </div>
+
+              <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center">
+                <span>Unit Price:</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                  [value]="item.unitPriceMkd === 0 ? '' : (item.unitPriceMkd ?? '')"
+                  (input)="updateUnitPrice(item, $any($event.target).value === '' ? '' : $any($event.target).value)"
+                  style="width: 120px"
+                  class="ims-no-spinner"
+                />
+                <span>MKD</span>
+              </div>
+
+              <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center">
+                <span>Discount %:</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  inputmode="decimal"
+                  [value]="item.discountPercent === 0 ? '' : (item.discountPercent ?? '')"
+                  (input)="updateDiscount(item, $any($event.target).value === '' ? '' : $any($event.target).value)"
+                  style="width: 80px"
+                  class="ims-no-spinner"
+                />
+              </div>
+
+              <div style="margin-top: 8px">Discount Amount: {{ item.discountAmountMkd.toFixed(2) }} MKD</div>
+              <div style="margin-top: 8px">Final Unit Price: {{ item.finalUnitPriceMkd.toFixed(2) }} MKD</div>
+              <div style="margin-top: 8px; font-weight: 600">Line Total: {{ item.lineTotalMkd.toFixed(2) }} MKD</div>
+
+              <button type="button" class="ims-cart-remove" (click)="removeItem(item.productId ?? item.id)">Remove</button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div style="margin-top: 16px; margin-bottom: 16px">
+      <button type="button" (click)="printOffer()" [disabled]="calculatedItems.length === 0">Print Offer</button>
+    </div>
+
+    <div class="ims-card" style="margin-top: 16px">
+      <h3 class="ims-card__title">Totals</h3>
+
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px">
+        <span>Subtotal</span>
+        <span>{{ totals.subtotal.toFixed(2) }} MKD</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px">
+        <span>Discount</span>
+        <span>{{ totals.discountAmount.toFixed(2) }} MKD</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px">
+        <span>VAT</span>
+        <span>{{ totals.vatAmount.toFixed(2) }} MKD</span>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid var(--ims-border-light); margin: 12px 0" />
+
+      <div style="display: flex; justify-content: space-between; font-weight: 700; margin-top: 4px">
+        <span>Total</span>
+        <span>{{ totals.totalAmount.toFixed(2) }} MKD</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 8px">
+        <span>Paid</span>
+        <span>{{ paidAmount.toFixed(2) }} MKD</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 4px">
+        <span>Remaining</span>
+        <span [style.color]="remainingAmount > 0 ? '#dc2626' : '#16a34a'">
+          {{ remainingAmount.toFixed(2) }} MKD
+        </span>
+      </div>
+
+      <button
+        type="button"
+        class="ims-btn-cta"
+        (click)="startConfirmSale()"
+        [disabled]="confirming() || totals.totalAmount <= 0"
+      >
+        {{ confirming() ? 'Confirming...' : 'Confirm Sale' }}
+      </button>
+    </div>
+  </div>
+
+  @if (zeroStockWarningOpen()) {
+    <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 1000">
+      <div style="width: 100%; max-width: 520px; background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.15)">
+        <h3 style="margin-top: 0; color: #b45309">Zero Stock Warning</h3>
+        <p style="margin-bottom: 12px">
+          This sale contains items whose current stock is 0. You can continue, but you should check the stock afterwards.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px">
+          @for (item of zeroStockItems(); track item.productId) {
+            <div style="padding: 10px 12px; border: 1px solid #f59e0b; background: #fffbeb; border-radius: 8px">
+              <strong>{{ item.productName }}</strong>
+              <div>Requested Qty: {{ getRequestedQuantity(item) }}</div>
+              <div>Current Stock: {{ getCurrentStock(item) }}</div>
+            </div>
+          }
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px">
+          <button type="button" [disabled]="confirming()" (click)="zeroStockWarningOpen.set(false)">Cancel</button>
+          <button
+            type="button"
+            [disabled]="confirming()"
+            style="padding: 10px 14px; border-radius: 8px; border: none; background: #111827; color: #fff; cursor: pointer; opacity: confirming() ? 0.7 : 1"
+            (click)="zeroStockWarningOpen.set(false); openConfirmDialog()"
+          >
+            Continue Anyway
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <app-sales-payment-dialog
+    [open]="confirmDialogOpen()"
+    [totalAmount]="totals.totalAmount"
+    [paidTotal]="confirmPaidTotal()"
+    [saving]="confirming()"
+    (paidTotalChange)="confirmPaidTotal.set($event)"
+    (setFull)="setConfirmPaidTotalFull()"
+    (setZero)="confirmPaidTotal.set('0')"
+    (cancel)="confirmDialogOpen.set(false)"
+    (confirm)="confirmSale()"
+  />
+</div>

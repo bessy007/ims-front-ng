@@ -1,0 +1,98 @@
+@if (!trend.length) {
+  <div class="stats-chart__empty">
+    <div class="stats-chart__empty-icon" aria-hidden="true">/</div>
+    No sales in this range - try widening the dates.
+  </div>
+} @else {
+  <div class="stats-chart" role="img" aria-label="Sales quantity trend by day">
+    <svg
+      #svgRoot
+      [attr.viewBox]="'0 0 ' + 640 + ' ' + 200"
+      preserveAspectRatio="xMidYMid meet"
+      (mousemove)="updateHover($event, svgRoot)"
+    >
+      <defs>
+        <linearGradient id="stats-chart-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#818cf8" stop-opacity="0.35" />
+          <stop offset="100%" stop-color="#c4b5fd" stop-opacity="0.05" />
+        </linearGradient>
+        <linearGradient id="stats-chart-line" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#6366f1" />
+          <stop offset="100%" stop-color="#c026d3" />
+        </linearGradient>
+      </defs>
+
+      @for (t of [0, 0.25, 0.5, 0.75, 1]; track t) {
+        <line
+          [attr.x1]="model().padL"
+          [attr.y1]="model().padT + (1 - t) * model().innerH"
+          [attr.x2]="model().padL + model().innerW"
+          [attr.y2]="model().padT + (1 - t) * model().innerH"
+          stroke="#e2e8f0"
+          stroke-width="1"
+          stroke-dasharray="4 6"
+        />
+      }
+
+      <path [attr.d]="model().pathArea" fill="url(#stats-chart-fill)" />
+      <path
+        [attr.d]="model().pathLine"
+        fill="none"
+        stroke="url(#stats-chart-line)"
+        stroke-width="2.5"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+      />
+
+      @if (hoverIdx() != null && model().points[hoverIdx()!]) {
+        <line
+          [attr.x1]="model().points[hoverIdx()!].x"
+          [attr.y1]="model().padT"
+          [attr.x2]="model().points[hoverIdx()!].x"
+          [attr.y2]="model().baseY"
+          stroke="#6366f1"
+          stroke-width="1"
+          stroke-dasharray="3 4"
+          opacity="0.45"
+        />
+      }
+
+      @for (point of model().points; track $index) {
+        <circle
+          [attr.cx]="point.x"
+          [attr.cy]="point.y"
+          [attr.r]="hoverIdx() === $index ? 6.5 : 3.5"
+          [attr.fill]="hoverIdx() === $index ? '#4f46e5' : '#a5b4fc'"
+          stroke="#fff"
+          stroke-width="1.5"
+        />
+      }
+
+      @for (item of trend; track $index) {
+        @if ($index % model().labelStep === 0) {
+          <text
+            [attr.x]="model().points[$index]?.x ?? 0"
+            [attr.y]="192"
+            text-anchor="middle"
+            font-size="9"
+            fill="#94a3b8"
+            font-weight="600"
+          >
+            {{ formatLabel(item.day).length > 7 ? formatLabel(item.day).slice(0, 6) + '...' : formatLabel(item.day) }}
+          </text>
+        }
+      }
+    </svg>
+
+    @if (hoveredPoint) {
+      <div
+        class="stats-chart__tooltip stats-chart__tooltip--show"
+        [style.left.%]="(hoveredPoint.x / 640) * 100"
+        style="top: 10px; transform: translateX(-50%)"
+      >
+        {{ formatLabel(hoveredPoint.day) }}
+        <span style="opacity: 0.85; margin-left: 8px">Qty {{ hoveredPoint.v.toFixed(2) }}</span>
+      </div>
+    }
+  </div>
+}

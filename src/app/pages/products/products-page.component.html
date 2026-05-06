@@ -1,0 +1,191 @@
+<div (click)="closeContextMenu()">
+  <div class="ims-page-heading">
+    <div>
+      <h1 class="ims-page-title">Inventory Management</h1>
+      <p class="ims-page-subtitle">
+        Search and manage products, article numbers, pricing, and stock levels.
+      </p>
+    </div>
+    <div class="ims-page-heading__actions">
+      <div class="ims-stats-pill">
+        <span><strong>{{ totalElements() }}</strong> items</span>
+        <span aria-hidden="true">·</span>
+        <span><strong>{{ inStockOnPage() }}</strong> in stock</span>
+        <span style="opacity: 0.65; font-weight: 500">(this page)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ims-toolbar">
+    <div class="ims-search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="M21 21l-4.35-4.35"></path>
+      </svg>
+      <input
+        placeholder="Search name, article number, barcode..."
+        [value]="filtersForm.controls.q.getRawValue()"
+        (input)="setFilterValue('q', $any($event.target).value)"
+      />
+    </div>
+
+    <select
+      [value]="stockFilter()"
+      (change)="stockFilter.set($any($event.target).value)"
+      style="width: auto; min-width: 140px"
+    >
+      <option value="all">All stock</option>
+      <option value="in">In stock</option>
+      <option value="out">Out / low</option>
+    </select>
+
+    <button type="button" class="ims-link-reset" (click)="resetFilters()">Reset</button>
+    <button type="button" class="ims-btn-green" (click)="tecdocDialogOpen.set(true)">TecDoc search</button>
+    <button type="button" class="ims-btn-muted" (click)="openNewPart()">+ New part</button>
+  </div>
+
+  <div class="ims-panel">
+    <div class="ims-filter-grid">
+      <input
+        placeholder="Article Number..."
+        [value]="filtersForm.controls.articleNumber.getRawValue()"
+        (input)="setFilterValue('articleNumber', $any($event.target).value)"
+      />
+
+      <input
+        placeholder="Barcode..."
+        [value]="filtersForm.controls.barcode.getRawValue()"
+        (input)="setFilterValue('barcode', $any($event.target).value)"
+      />
+
+      <select
+        [value]="filtersForm.controls.brandId.getRawValue()"
+        (change)="setFilterValue('brandId', $any($event.target).value)"
+      >
+        <option value="">All brands</option>
+        @for (brand of brands(); track brand.id) {
+          <option [value]="brand.id">{{ brand.name }}</option>
+        }
+      </select>
+
+      <select
+        [value]="filtersForm.controls.categoryId.getRawValue()"
+        (change)="setFilterValue('categoryId', $any($event.target).value)"
+      >
+        <option value="">All categories</option>
+        @for (category of categories(); track category.id) {
+          <option [value]="category.id">{{ category.name }}</option>
+        }
+      </select>
+
+      <select
+        [value]="filtersForm.controls.active.getRawValue()"
+        (change)="setFilterValue('active', $any($event.target).value)"
+      >
+        <option value="">All statuses</option>
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+
+      <button type="button" (click)="loadRows()">Refresh</button>
+    </div>
+
+    @if (loading()) {
+      <p>Loading products...</p>
+    } @else if (error()) {
+      <p>Failed to load products.</p>
+    } @else {
+      <div class="ims-data-table-wrap">
+        <table class="ims-data-table">
+          <thead>
+            <tr>
+              <th>Article Number</th>
+              <th>Part Name</th>
+              <th>Brand</th>
+              <th>Category</th>
+              <th>Barcode</th>
+              <th>Shelf</th>
+              <th class="ims-num">Qty</th>
+              <th class="ims-num">Retail MKD</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (filteredRows().length === 0) {
+              <tr><td colspan="10">No products found.</td></tr>
+            } @else {
+              @for (row of filteredRows(); track row.id) {
+                <tr
+                  (contextmenu)="openContextMenu($event, row)"
+                  (dblclick)="viewProduct(row.id)"
+                  style="cursor: pointer"
+                  title="Double-click to open details. Right-click for more actions."
+                >
+                  <td>{{ row.articleNumber || '-' }}</td>
+                  <td>{{ row.name || '-' }}</td>
+                  <td>{{ row.brandName || '-' }}</td>
+                  <td>{{ row.categoryName || '-' }}</td>
+                  <td>{{ row.barcode || '-' }}</td>
+                  <td>{{ row.shelf || '-' }}</td>
+                  <td class="ims-num">{{ formatQuantity(row.quantity) }}</td>
+                  <td class="ims-num">{{ formatMoney(row.retailPriceMkd) }}</td>
+                  <td><span [class]="stockStatus(row).className">{{ stockStatus(row).label }}</span></td>
+                  <td>
+                    <div class="ims-table-actions" style="display: flex; gap: 8px; align-items: center" (click)="$event.stopPropagation()">
+                      <a
+                        [routerLink]="['/products', row.id]"
+                        class="ims-btn-muted"
+                        style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; min-width: 70px"
+                      >
+                        View
+                      </a>
+                      <button type="button" class="ims-btn-muted" style="min-width: 70px" (click)="openEdit(row.id)">
+                        Edit
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center">
+        <button type="button" [disabled]="page() <= 0" (click)="previousPage()">Previous</button>
+        <span>Page {{ page() + 1 }} of {{ Math.max(totalPages(), 1) }}</span>
+        <button type="button" [disabled]="page() + 1 >= totalPages()" (click)="nextPage()">Next</button>
+      </div>
+    }
+  </div>
+
+  <app-tecdoc-search-dialog
+    [open]="tecdocDialogOpen()"
+    [brands]="brands()"
+    (closed)="tecdocDialogOpen.set(false)"
+    (selected)="handleTecDocSelect($event)"
+  />
+
+  <app-product-drawer
+    [open]="drawerMode() !== null"
+    [mode]="drawerMode()"
+    [productId]="drawerProductId()"
+    [brands]="brands()"
+    [categories]="categories()"
+    [prefillValues]="drawerPrefillValues()"
+    (closed)="closeDrawer()"
+    (saved)="handleProductSaved()"
+  />
+
+  @if (contextMenu()) {
+    <app-product-row-context-menu
+      [x]="contextMenu()!.x"
+      [y]="contextMenu()!.y"
+      [row]="contextMenu()!.row"
+      (closed)="closeContextMenu()"
+      (edit)="openEdit($event.id)"
+      (view)="viewProduct($event.id)"
+    />
+  }
+</div>

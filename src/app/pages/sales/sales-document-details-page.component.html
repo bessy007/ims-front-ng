@@ -1,0 +1,233 @@
+@if (loading()) {
+  <p>Loading sales document...</p>
+} @else if (error() || !document()) {
+  <div>
+    <h1>Sales Document</h1>
+    <p>Failed to load sales document.</p>
+    <button type="button" (click)="loadDocument()">Retry</button>
+  </div>
+} @else {
+  <div style="display: grid; gap: 16px">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap">
+      <div>
+        <h1 style="margin: 0">Sales Document {{ document()?.documentNumber }}</h1>
+        <div style="margin-top: 6px; color: #6b7280">Type: {{ document()?.documentType }}</div>
+      </div>
+
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <button type="button" (click)="goToList()">Back to List</button>
+
+        @if (!isEditMode()) {
+          <button type="button" (click)="previewPdf()">Preview PDF</button>
+          <button type="button" (click)="downloadPdf()">Download PDF</button>
+          <button type="button" [disabled]="document()?.fiscalized" (click)="openPaymentDialog()">Make Payment</button>
+          <button type="button" [disabled]="document()?.fiscalized" (click)="enterEditMode()">Edit Sale</button>
+          <button
+            type="button"
+            [disabled]="document()?.fiscalized || !canFiscalize"
+            (click)="fiscalize()"
+          >
+            Fiscalize
+          </button>
+          <button
+            type="button"
+            [disabled]="document()?.fiscalized"
+            style="background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer"
+            (click)="deleteDocument()"
+          >
+            Delete
+          </button>
+        } @else {
+          <button type="button" [disabled]="saving()" (click)="saveChanges()">Save Changes</button>
+          <button type="button" (click)="cancelEdit()">Cancel Edit</button>
+        }
+      </div>
+    </div>
+
+    <div class="ims-card">
+      <h3 style="margin-top: 0">Document Info</h3>
+
+      @if (!isEditMode()) {
+        <div style="display: grid; gap: 8px">
+          <div><strong>Number:</strong> {{ document()?.documentNumber }}</div>
+          <div><strong>Type:</strong> {{ document()?.documentType }}</div>
+          <div><strong>Date:</strong> {{ formatDate(document()?.documentDate) }}</div>
+          <div><strong>Customer ID:</strong> {{ document()?.customerId ?? '-' }}</div>
+          <div><strong>Warehouse ID:</strong> {{ document()?.warehouseId ?? '-' }}</div>
+          <div><strong>Payment Method:</strong> {{ document()?.paymentMethod || '-' }}</div>
+          <div><strong>Fiscalized:</strong> {{ document()?.fiscalized ? 'Yes' : 'No' }}</div>
+          <div><strong>Paid Date:</strong> {{ formatDate(document()?.paidDate) }}</div>
+          <div><strong>Description:</strong> {{ document()?.description || '-' }}</div>
+        </div>
+      } @else {
+        <div [formGroup]="editHeaderForm" style="display: grid; gap: 12px">
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 600">Type</label>
+            <input
+              type="text"
+              [value]="editHeaderForm.controls.documentType.getRawValue()"
+              readonly
+              style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #f3f4f6"
+            />
+          </div>
+
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 600">Date</label>
+            <input
+              type="datetime-local"
+              [value]="toDateTimeLocalValue(editHeaderForm.controls.documentDate.getRawValue())"
+              (change)="updateDocumentDateFromInput($any($event.target).value)"
+              style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db"
+            />
+          </div>
+
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 600">Customer</label>
+            <select formControlName="customerId" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db">
+              <option value="">Walk-in customer</option>
+              @for (customer of customers(); track customer.id) {
+                <option [value]="customer.id">{{ customer.name }}</option>
+              }
+            </select>
+          </div>
+
+          @if (editHeaderForm.controls.documentType.getRawValue() !== 'INVOICE') {
+            <div>
+              <label style="display: block; margin-bottom: 6px; font-weight: 600">Payment Method</label>
+              <select formControlName="paymentMethod" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db">
+                <option value="CASH">Cash</option>
+                <option value="CARD">Card</option>
+              </select>
+            </div>
+          }
+
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 600">Description</label>
+            <textarea rows="3" formControlName="description" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db"></textarea>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (isEditMode()) {
+      <div class="ims-card">
+        <h3 style="margin-top: 0">Add Products</h3>
+        <input
+          placeholder="Search product..."
+          [value]="editHeaderForm.controls.productSearch.getRawValue()"
+          (input)="editHeaderForm.controls.productSearch.setValue($any($event.target).value); searchProducts($any($event.target).value)"
+        />
+        <div style="margin-top: 16px">
+          @if (productSearchLoading()) {
+            <p>Loading products...</p>
+          } @else if (productSearchError()) {
+            <p>Failed to load products.</p>
+          } @else if (searchResults().length === 0) {
+            <p style="color: var(--ims-text-muted)">No products found.</p>
+          } @else {
+            @for (product of searchResults(); track product.id) {
+              <div class="ims-list-row" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+                <div>
+                  <strong>{{ product.name }}</strong>
+                  <div style="color: var(--ims-text-muted)">{{ product.articleNumber || '-' }}</div>
+                </div>
+                <button type="button" (click)="addToCart(product)">Add</button>
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="ims-card">
+        <h3 style="margin-top: 0">Edit Items</h3>
+        @if (calculatedEditItems.length === 0) {
+          <p style="color: var(--ims-text-muted)">No items.</p>
+        } @else {
+          @for (item of calculatedEditItems; track item.id ?? item.productId) {
+            <div class="ims-cart-line" style="margin-bottom: 12px">
+              <div style="font-weight: 700; margin-bottom: 10px">{{ item.productName }}</div>
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+                <div>
+                  <label>Quantity</label>
+                  <input type="number" min="0" [value]="item.quantity" (input)="updateItemField(item, 'quantity', $any($event.target).value)" />
+                </div>
+                <div>
+                  <label>Discount %</label>
+                  <input type="number" min="0" [value]="item.discountPercent" (input)="updateItemField(item, 'discountPercent', $any($event.target).value)" />
+                </div>
+                <div>
+                  <label>Unit Price</label>
+                  <input type="number" min="0" [value]="item.unitPriceMkd" (input)="updateItemField(item, 'unitPriceMkd', $any($event.target).value)" />
+                </div>
+              </div>
+              <div style="margin-top:10px;color:var(--ims-text-muted)">Line total: {{ formatMoney(item.lineTotalMkd) }} MKD</div>
+              <button type="button" class="ims-cart-remove" (click)="removeItem(item.productId)">Remove</button>
+            </div>
+          }
+        }
+      </div>
+    } @else {
+      <div class="ims-card">
+        <h3 style="margin-top: 0">Items</h3>
+        <div style="overflow-x: auto">
+          <table width="100%" cellPadding="10" style="border-collapse: collapse">
+            <thead>
+              <tr>
+                <th align="left">Product</th>
+                <th align="right">Qty</th>
+                <th align="right">Unit Price</th>
+                <th align="right">Discount %</th>
+                <th align="right">Discount Amount</th>
+                <th align="right">Final Unit Price</th>
+                <th align="right">Line Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if ((document()?.items?.length ?? 0) === 0) {
+                <tr><td colspan="7">No items found.</td></tr>
+              } @else {
+                @for (item of document()?.items ?? []; track item.id ?? item.productId) {
+                  <tr style="border-top: 1px solid #e5e7eb">
+                    <td>{{ item.productName || ('Product ' + item.productId) }}</td>
+                    <td align="right">{{ formatMoney(item.quantity) }}</td>
+                    <td align="right">{{ formatMoney(item.unitPriceMkd) }}</td>
+                    <td align="right">{{ formatMoney(item.discountPercent) }}</td>
+                    <td align="right">{{ formatMoney(item.discountAmountMkd) }}</td>
+                    <td align="right">{{ formatMoney(item.finalUnitPriceMkd) }}</td>
+                    <td align="right">{{ formatMoney(item.lineTotalMkd) }}</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <div class="ims-card">
+      <h3 style="margin-top: 0">Totals</h3>
+      <div style="display: grid; gap: 8px">
+        <div><strong>Subtotal:</strong> {{ formatMoney(isEditMode() ? editTotals.subtotal : document()?.subtotal) }} MKD</div>
+        <div><strong>Discount:</strong> {{ formatMoney(isEditMode() ? editTotals.discountAmount : document()?.discountAmount) }} MKD</div>
+        <div><strong>VAT:</strong> {{ formatMoney(isEditMode() ? editTotals.vatAmount : document()?.vatAmount) }} MKD</div>
+        <div><strong>Total:</strong> {{ formatMoney(isEditMode() ? editTotals.totalAmount : document()?.totalAmount) }} MKD</div>
+        @if (!isEditMode()) {
+          <div><strong>Paid:</strong> {{ formatMoney(document()?.paidTotal) }} MKD</div>
+          <div><strong>Remaining:</strong> {{ formatMoney(remainingAmount) }} MKD</div>
+        }
+      </div>
+    </div>
+
+    <app-sales-payment-dialog
+      [open]="paymentDialogOpen()"
+      [totalAmount]="paymentDialogTotalAmount"
+      [paidTotal]="paymentPaidTotal()"
+      [saving]="paymentSaving()"
+      (paidTotalChange)="paymentPaidTotal.set($event)"
+      (setFull)="setPaymentFull()"
+      (setZero)="paymentPaidTotal.set('0')"
+      (cancel)="cancelPaymentDialog()"
+      (confirm)="confirmPayment()"
+    />
+  </div>
+}

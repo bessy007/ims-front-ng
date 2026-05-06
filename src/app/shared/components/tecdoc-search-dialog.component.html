@@ -1,0 +1,55 @@
+@if (open) {
+  <div class="ims-modal-root">
+    <div class="ims-modal-backdrop" (click)="closed.emit()"></div>
+    <div class="ims-modal-panel" style="max-width: 900px">
+      <div class="ims-modal-header">
+        <h3 style="margin: 0">TecDoc Search</h3>
+        <button type="button" (click)="closed.emit()">×</button>
+      </div>
+
+      <div class="ims-modal-body">
+        <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: 12px; margin-top: 0">
+          <input placeholder="Article Number" formControlName="articleNumber" />
+
+          <select formControlName="brandId">
+            <option value="">All brands</option>
+            @for (brand of brands; track brand.id) {
+              <option [value]="brand.id">{{ brand.name }}</option>
+            }
+          </select>
+
+          <button type="submit" [disabled]="searching()">
+            {{ searching() ? 'Searching...' : 'Search' }}
+          </button>
+        </form>
+
+        <div style="margin-top: 20px; display: grid; gap: 12px">
+          @for (item of results(); track item.articleId + '-' + item.supplierId) {
+            <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; display: grid; grid-template-columns: 100px 1fr auto; gap: 12px; align-items: center">
+              <div>
+                @if (item.imageUrl) {
+                  <img [src]="item.imageUrl" [alt]="item.articleProductName" style="width: 80px; height: 80px; object-fit: contain" />
+                } @else {
+                  <div style="width: 80px; height: 80px; background: #f3f4f6"></div>
+                }
+              </div>
+
+              <div>
+                <div><strong>{{ item.articleProductName }}</strong></div>
+                <div>Brand: {{ item.supplierName }}</div>
+                <div>Article Number: {{ item.articleNo }}</div>
+                <div>TecDoc Article ID: {{ item.articleId }}</div>
+              </div>
+
+              <button type="button" (click)="selected.emit(item)">Use</button>
+            </div>
+          }
+
+          @if (!searching() && results().length === 0 && searched()) {
+            <p>No TecDoc results found.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

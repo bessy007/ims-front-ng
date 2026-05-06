@@ -1,0 +1,51 @@
+<aside class="ims-sidebar">
+  <div class="ims-sidebar__head">
+    <div class="ims-sidebar__logo">
+      <img src="/logo_sidebar.png" alt="AutoStock IMS logo" />
+    </div>
+    <div class="ims-sidebar__brand-text">
+      <div class="ims-sidebar__brand-title">AutoStock IMS</div>
+      <div class="ims-sidebar__brand-sub">Inventory Management</div>
+    </div>
+  </div>
+
+  <nav class="ims-sidebar__nav" aria-label="Main">
+    <div class="ims-sidebar__group-label">Main</div>
+    @for (item of mainItems; track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="ims-sidebar__link--active"
+        [routerLinkActiveOptions]="{ exact: item.path === '/sales' }"
+        class="ims-sidebar__link"
+      >
+        <span class="ims-sidebar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            @for (path of iconPaths(item.icon); track path) {
+              <path [attr.d]="path" />
+            }
+          </svg>
+        </span>
+        {{ item.label }}
+      </a>
+    }
+
+    <div class="ims-sidebar__group-label">Other</div>
+    @for (item of otherItems; track item.path) {
+      <a [routerLink]="item.path" routerLinkActive="ims-sidebar__link--active" class="ims-sidebar__link">
+        <span class="ims-sidebar__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            @for (path of iconPaths(item.icon); track path) {
+              <path [attr.d]="path" />
+            }
+          </svg>
+        </span>
+        {{ item.label }}
+      </a>
+    }
+  </nav>
+
+  <div class="ims-sidebar__footer">
+    <div class="ims-sidebar__signed-in">Signed in as {{ displayName() }}</div>
+    <div class="ims-sidebar__version">v1.0.0</div>
+  </div>
+</aside>

@@ -1,0 +1,47 @@
+@if (open) {
+  <div class="ims-drawer-root" role="presentation">
+    <div class="ims-drawer-backdrop" (click)="closed.emit()" aria-hidden="true"></div>
+
+    <aside class="ims-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="product-drawer-title">
+      <header class="ims-drawer-header">
+        <div>
+          <p class="ims-drawer-overline">{{ isEdit ? 'Inventory' : 'Create' }}</p>
+          <h2 id="product-drawer-title" class="ims-drawer-title">{{ title }}</h2>
+          @if (subtitle) {
+            <span class="ims-drawer__subtitle">{{ subtitle }}</span>
+          }
+          @if (isEdit && product()?.tecdocArticleId != null) {
+            <p class="ims-drawer-meta">TecDoc Article ID: <strong>{{ product()?.tecdocArticleId }}</strong></p>
+          }
+          @if (!isEdit && prefillValues?.tecdocArticleId != null) {
+            <p class="ims-drawer-meta">TecDoc Article ID: <strong>{{ prefillValues?.tecdocArticleId }}</strong></p>
+          }
+        </div>
+        <button type="button" class="ims-drawer-close" (click)="closed.emit()" aria-label="Close panel">×</button>
+      </header>
+
+      <div class="ims-drawer-body">
+        @if (isEdit && loading()) {
+          <p class="ims-drawer-status">Loading product...</p>
+        }
+
+        @if (isEdit && error()) {
+          <p class="ims-drawer-status ims-drawer-status--error">Failed to load product.</p>
+        }
+
+        @if (mode === 'create' || (isEdit && product() && !loading() && !error())) {
+          <app-product-form
+            [brands]="brands"
+            [categories]="categories"
+            [initialValues]="initialValues"
+            [saving]="saving()"
+            [submitLabel]="isEdit ? 'Save changes' : 'Create product'"
+            variant="drawer"
+            (submitted)="submit($event)"
+            (cancelled)="closed.emit()"
+          />
+        }
+      </div>
+    </aside>
+  </div>
+}

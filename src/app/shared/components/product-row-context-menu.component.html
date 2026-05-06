@@ -1,0 +1,13 @@
+@if (row) {
+  <div style="position: fixed; inset: 0; z-index: 1000" (click)="closed.emit()">
+    <div
+      style="position: fixed; min-width: 180px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16); overflow: hidden"
+      [style.left.px]="x"
+      [style.top.px]="y"
+      (click)="$event.stopPropagation()"
+    >
+      <button type="button" class="ims-btn-ghost" (click)="view.emit(row); closed.emit()">View details</button>
+      <button type="button" class="ims-btn-ghost" (click)="edit.emit(row); closed.emit()">Edit product</button>
+    </div>
+  </div>
+}

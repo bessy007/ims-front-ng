@@ -1,0 +1,41 @@
+<div>
+  <h1 class="ims-page-title">Brands</h1>
+
+  <form class="ims-card" [formGroup]="form" (ngSubmit)="submit()">
+    <h3 class="ims-card__title">Add Brand</h3>
+
+    <input type="text" placeholder="Brand name" formControlName="name" required style="margin-bottom: 12px" />
+
+    <input
+      type="number"
+      placeholder="TecDoc Supplier ID (optional)"
+      formControlName="tecdocSupplierId"
+      style="margin-bottom: 12px"
+    />
+
+    <button type="submit" class="ims-btn-primary" style="width: auto" [disabled]="saving()">
+      {{ saving() ? 'Saving...' : 'Save Brand' }}
+    </button>
+  </form>
+
+  <div class="ims-card">
+    <h3 class="ims-card__title">Brand List</h3>
+
+    @if (loading()) {
+      <p style="color: var(--ims-text-muted)">Loading brands...</p>
+    } @else if (brands().length === 0) {
+      <p style="color: var(--ims-text-muted)">No brands found.</p>
+    } @else {
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        @for (brand of brands(); track brand.id) {
+          <div class="ims-list-row">
+            <strong>{{ brand.name }}</strong>
+            @if (brand.tecdocSupplierId != null) {
+              <span style="margin-left: 8px; color: #666">(TecDoc: {{ brand.tecdocSupplierId }})</span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

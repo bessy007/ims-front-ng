@@ -1,0 +1,110 @@
+@if (loading()) {
+  <p>Loading product details...</p>
+} @else if (!product()) {
+  <p>Failed to load product details.</p>
+} @else {
+  <div style="display: grid; gap: 20px">
+    <div class="ims-page-heading">
+      <div>
+        <div style="margin-bottom: 8px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center">
+          <a routerLink="/products" class="ims-link-reset">← Back to products</a>
+          <a [routerLink]="['/statistics']" [queryParams]="{ tab: 'product', productId: product()?.id }" class="ims-link-reset">
+            Statistics for this product →
+          </a>
+        </div>
+        <h1 class="ims-page-title">{{ product()?.name || 'Unnamed product' }}</h1>
+        <p class="ims-page-subtitle">
+          {{ product()?.articleNumber || '-' }}
+          @if (product()?.brandName) { · {{ product()?.brandName }} }
+          @if (product()?.tecdocArticleId) { · TecDoc ID {{ product()?.tecdocArticleId }} }
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center">
+        <a [routerLink]="['/products']" [queryParams]="{ edit: product()?.id }" class="ims-btn-muted" style="text-decoration: none">Edit</a>
+        <button type="button" class="ims-btn-danger" [disabled]="deleting()" (click)="deleteProduct()">
+          {{ deleting() ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start">
+      <div class="ims-card" style="min-height: 320px">
+        <h3 class="ims-card__title">Photo</h3>
+
+        @if (product()?.brandLogoUrl) {
+          <div style="margin-bottom: 16px; display: flex; justify-content: center; align-items: center; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff">
+            <img [src]="product()?.brandLogoUrl" [alt]="product()?.brandName || 'Brand'" style="max-width: 180px; max-height: 60px; object-fit: contain" />
+          </div>
+        }
+
+        @if (product()?.tecdocImageUrl) {
+          <div style="border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; padding: 16px; display: flex; justify-content: center; align-items: center; min-height: 240px">
+            <img [src]="product()?.tecdocImageUrl" [alt]="product()?.name || 'Product'" style="max-width: 100%; max-height: 240px; object-fit: contain" />
+          </div>
+        } @else {
+          <div style="border: 1px dashed #d1d5db; border-radius: 12px; min-height: 240px; display: flex; align-items: center; justify-content: center; color: var(--ims-text-muted)">
+            No image available
+          </div>
+        }
+      </div>
+
+      <div class="ims-card">
+        <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--ims-border-light); padding-bottom: 12px; margin-bottom: 12px; flex-wrap: wrap">
+          <button type="button" [class]="activeTab() === 'overview' ? 'ims-btn-cta' : 'ims-btn-muted'" (click)="activeTab.set('overview')">Overview</button>
+          <button type="button" [class]="activeTab() === 'oems' ? 'ims-btn-cta' : 'ims-btn-muted'" (click)="activeTab.set('oems')">OEM Numbers</button>
+          <button type="button" [class]="activeTab() === 'vehicles' ? 'ims-btn-cta' : 'ims-btn-muted'" (click)="activeTab.set('vehicles')">Compatible Vehicles</button>
+          <button type="button" [class]="activeTab() === 'crossovers' ? 'ims-btn-cta' : 'ims-btn-muted'" (click)="activeTab.set('crossovers')">Crossover Numbers</button>
+        </div>
+
+        @if (activeTab() === 'overview') {
+          <div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Product Name</div><div>{{ product()?.name || '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Article Number</div><div>{{ product()?.articleNumber || '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Barcode</div><div>{{ product()?.barcode || '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Brand</div><div>{{ product()?.brandName || '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Category</div><div>{{ product()?.categoryName || '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Shelf</div><div>{{ product()?.shelf || '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Packaging Quantity</div><div>{{ formatDecimal(product()?.packagingQuantity) }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Supplier Price</div><div>{{ formatMoneyEur(product()?.lastSupplierPriceEur) }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Cost (MKD)</div><div>{{ formatMoneyMkd(product()?.lastPurchasePriceMkd) }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Retail Price</div><div>{{ formatMoneyMkd(product()?.retailPriceMkd) }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">VAT Rate</div><div>{{ product()?.vatRate != null ? (product()?.vatRate | number:'1.2-2') + ' %' : '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">TecDoc Article ID</div><div>{{ product()?.tecdocArticleId || '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">TecDoc Supplier ID</div><div>{{ product()?.tecdocSupplierId || '-' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Active</div><div>{{ product()?.active ? 'Yes' : 'No' }}</div></div>
+            <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid #eef2f7"><div style="color:var(--ims-text-muted);font-weight:600">Description</div><div>{{ product()?.description || '-' }}</div></div>
+          </div>
+        }
+
+        @if (activeTab() === 'oems') {
+          @if (oemNumbers().length === 0) {
+            <p style="margin: 0; color: var(--ims-text-muted)">No OEM numbers available.</p>
+          } @else {
+            <div class="ims-data-table-wrap">
+              <table class="ims-data-table">
+                <thead><tr><th>Brand</th><th>OEM Number</th></tr></thead>
+                <tbody>
+                  @for (oem of oemNumbers(); track oem.id ?? oem.oemNumber) {
+                    <tr>
+                      <td>{{ oem.oemBrand || '-' }}</td>
+                      <td>{{ oem.oemNumber || '-' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+        @if (activeTab() === 'vehicles') {
+          <div style="color: var(--ims-text-muted)">Compatible vehicles will be added later from TecDoc data.</div>
+        }
+
+        @if (activeTab() === 'crossovers') {
+          <div style="color: var(--ims-text-muted)">Crossover numbers will be added later.</div>
+        }
+      </div>
+    </div>
+  </div>
+}

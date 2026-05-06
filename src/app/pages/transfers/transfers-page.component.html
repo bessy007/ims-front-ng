@@ -1,0 +1,50 @@
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px">
+  <div>
+    <h1 class="ims-page-title">Stock Transfer</h1>
+
+    <form [formGroup]="form" style="display: grid; gap: 12px">
+      <select formControlName="sourceWarehouseId">
+        <option [ngValue]="0">Select Source</option>
+        @for (warehouse of warehouses(); track warehouse.id) {
+          <option [ngValue]="warehouse.id">{{ warehouse.name }}</option>
+        }
+      </select>
+
+      <select formControlName="destinationWarehouseId">
+        <option [ngValue]="0">Select Destination</option>
+        @for (warehouse of warehouses(); track warehouse.id) {
+          <option [ngValue]="warehouse.id">{{ warehouse.name }}</option>
+        }
+      </select>
+
+      <input placeholder="Search product..." formControlName="search" />
+    </form>
+
+    @if (searchingProducts()) {
+      <p>Searching products...</p>
+    }
+
+    @for (product of products(); track product.id) {
+      <div class="ims-list-row" style="display: flex; justify-content: space-between; gap: 12px; align-items: center">
+        <div>{{ product.name }} - {{ product.retailPriceMkd }}</div>
+        <button type="button" [disabled]="busy()" (click)="addProduct(product)">Add</button>
+      </div>
+    }
+  </div>
+
+  <div>
+    <h3>Transfer Items</h3>
+
+    @if ((transfer()?.items?.length ?? 0) === 0) {
+      <p style="color: var(--ims-text-muted)">No transfer items yet.</p>
+    } @else {
+      @for (item of transfer()?.items ?? []; track item.id) {
+        <div class="ims-list-row">{{ item.productName }} x {{ item.quantity }}</div>
+      }
+    }
+
+    <button type="button" [disabled]="busy() || !transferId()" (click)="confirmTransfer()">
+      Confirm Transfer
+    </button>
+  </div>
+</div>
